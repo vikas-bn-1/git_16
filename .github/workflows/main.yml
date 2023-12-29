@@ -13,11 +13,13 @@ on:
         options:
         - t2.micro
         - t2.small
+        default: "t2.micro"
 
       instance_ami:
         type: string
         description: "instance ami"
-        required: true     
+        required: true 
+        default: "ami-02e94b011299ef128" 
         
 jobs:
   
