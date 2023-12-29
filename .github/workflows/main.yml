@@ -1,0 +1,72 @@
+---
+name: "Infra Build"
+
+on:
+
+  workflow_dispatch:
+    
+    inputs:
+        
+      instance_type:
+        type: choice
+        description: "instance type"
+        options:
+        - t2.micro
+        - t2.small
+
+      instance_ami:
+        type: string
+        description: "instance ami"
+        required: true     
+        
+jobs:
+  
+  build:
+    runs-on: ubuntu-latest      
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY }}    
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SECRET_KEY }}    
+      AWS_DEFAULT_REGION: ${{ secrets.REGION }}  
+    
+    steps:
+
+      - name: "Checkout Repository"
+        uses : actions/checkout@v3
+
+      - name: "Terraform Installation"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.2"  
+            
+      - name: "Terraform init"
+        run: |
+          terraform init \
+               --backend-config="bucket=${{ secrets.S3_BUCKET }}" \
+               --backend-config="key=terraform.tfstate" \
+               --backend-config="region=ap-south-1" \
+               --backend-config="access_key=${{ secrets.ACCESS_KEY }}" \
+               --backend-config="secret_key=${{ secrets.SECRET_KEY }}" \
+        shell: bash
+
+      - name: "Format Terraform"
+        run: terraform fmt
+        shell: bash                
+            
+      - name: "Terraform validate"
+        run: terraform validate
+        shell: bash          
+            
+      - name: "Terraform plan"
+        run: |
+          terraform plan \
+           -var "instance_type=${{ github.event.inputs.instance_type }}" \
+           -var "instance_ami=${{ github.event.inputs.instance_ami }}"
+        shell: bash            
+
+      - name: "Terraform Apply"
+        run: |
+          terraform apply \
+           -var "instance_type=${{ github.event.inputs.instance_type }}" \
+           -var "instance_ami=${{ github.event.inputs.instance_ami }}" \
+           -auto-approve
+        shell: bash
